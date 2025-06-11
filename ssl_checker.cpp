@@ -335,15 +335,41 @@ CertificateInfo SSLChecker::extractCertInfo(X509* cert) {
 std::string SSLChecker::formatName(X509_NAME* name) {
     if (!name) return "";
     
+    // 首先获取原始的DER编码数据
     BIO* bio = BIO_new(BIO_s_mem());
     X509_NAME_print_ex(bio, name, 0, XN_FLAG_RFC2253);
     
     char* data = nullptr;
     long len = BIO_get_mem_data(bio, &data);
     std::string result(data, len);
-    
     BIO_free(bio);
-    return result;
+    
+    // 解码十六进制转义序列
+    std::string decoded;
+    size_t i = 0;
+    
+    while (i < result.length()) {
+        if (result[i] == '\\' && i + 2 < result.length() && 
+            isxdigit(result[i+1]) && isxdigit(result[i+2])) {
+            // 收集所有连续的转义序列
+            std::vector<unsigned char> bytes;
+            while (i < result.length() && 
+                   result[i] == '\\' && i + 2 < result.length() && 
+                   isxdigit(result[i+1]) && isxdigit(result[i+2])) {
+                std::string hex = result.substr(i+1, 2);
+                unsigned char byte = static_cast<unsigned char>(std::stoi(hex, nullptr, 16));
+                bytes.push_back(byte);
+                i += 3; // 跳过 '\' 和两个十六进制字符
+            }
+            // 将收集到的字节作为UTF-8字符串添加到结果中
+            decoded.append(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        } else {
+            decoded.push_back(result[i]);
+            ++i;
+        }
+    }
+    
+    return decoded;
 }
 
 std::string SSLChecker::getSerialNumber(X509* cert) {
@@ -498,13 +524,25 @@ std::vector<std::string> SSLChecker::getSubjectAltNames(X509* cert) {
         for (int i = 0; i < sk_GENERAL_NAME_num(names); i++) {
             GENERAL_NAME* gen = sk_GENERAL_NAME_value(names, i);
             
-            if (gen->type == GEN_DNS) {
-                const unsigned char* dns = ASN1_STRING_get0_data(gen->d.dNSName);
-                result.push_back(std::string(reinterpret_cast<const char*>(dns)));
-            }
-            else if (gen->type == GEN_URI) {
-                const unsigned char* uri = ASN1_STRING_get0_data(gen->d.uniformResourceIdentifier);
-                result.push_back(std::string(reinterpret_cast<const char*>(uri)));
+            if (gen->type == GEN_DNS || gen->type == GEN_URI) {
+                ASN1_STRING* str = (gen->type == GEN_DNS) ? gen->d.dNSName : gen->d.uniformResourceIdentifier;
+                
+                // 使用BIO来正确处理可能的UTF-8编码
+                BIO* bio = BIO_new(BIO_s_mem());
+                ASN1_STRING_print_ex(bio, str, ASN1_STRFLGS_UTF8_CONVERT | ASN1_STRFLGS_ESC_QUOTE);
+                
+                char* data = nullptr;
+                long len = BIO_get_mem_data(bio, &data);
+                if (data && len > 0) {
+                    // 去除引号（如果存在）
+                    std::string value(data, len);
+                    if (value.length() >= 2 && value.front() == '"' && value.back() == '"') {
+                        value = value.substr(1, value.length() - 2);
+                    }
+                    result.push_back(value);
+                }
+                
+                BIO_free(bio);
             }
         }
         

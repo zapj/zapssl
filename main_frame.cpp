@@ -9,6 +9,7 @@ wxDEFINE_EVENT(CHECK_COMPLETE_EVENT, wxCommandEvent);
 // Event table
 wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_BUTTON(wxID_ANY, MainFrame::OnCheck)
+    EVT_TEXT_ENTER(wxID_ANY, MainFrame::OnCheck)
     EVT_COMMAND(wxID_ANY, CHECK_COMPLETE_EVENT, MainFrame::OnCheckComplete)
 wxEND_EVENT_TABLE()
 
@@ -33,7 +34,7 @@ MainFrame::MainFrame(const wxString& title)
     wxBoxSizer* inputSizer = new wxBoxSizer(wxHORIZONTAL);
 
     inputSizer->Add(new wxStaticText(panel, wxID_ANY, "Host:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-    m_hostInput = new wxTextCtrl(panel, wxID_ANY, "");
+    m_hostInput = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
     inputSizer->Add(m_hostInput, 1, wxRIGHT, 10);
 
     inputSizer->Add(new wxStaticText(panel, wxID_ANY, "Port:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
@@ -211,8 +212,8 @@ void MainFrame::OnCheckComplete(wxCommandEvent& event) {
 void MainFrame::DisplayCertificateInfo(const CertificateInfo& certInfo) {
     wxString info;
 
-    info << "Subject: " << certInfo.subject << "\n\n";
-    info << "Issuer: " << certInfo.issuer << "\n\n";
+    info << "Subject: " << wxString::FromUTF8(certInfo.subject) << "\n\n";
+    info << "Issuer: " << wxString::FromUTF8(certInfo.issuer) << "\n\n";
     info << "Serial Number: " << certInfo.serialNumber << "\n\n";
     info << "Valid From: " << certInfo.validFrom << "\n";
     info << "Valid To: " << certInfo.validTo << "\n";
@@ -223,7 +224,7 @@ void MainFrame::DisplayCertificateInfo(const CertificateInfo& certInfo) {
 
     info << "Subject Alternative Names:\n";
     for (const auto& san : certInfo.subjectAltNames) {
-        info << "  " << san << "\n";
+        info << "  " << wxString::FromUTF8(san) << "\n";
     }
 
     m_certificateText->SetValue(info);
@@ -242,8 +243,8 @@ void MainFrame::DisplayCertificateChain(const CertificateChain& chain) {
         const auto& cert = chain.certificates[i];
 
         m_chainGrid->SetCellValue(i, 0, wxString::Format("%zu", i));
-        m_chainGrid->SetCellValue(i, 1, cert.subject);
-        m_chainGrid->SetCellValue(i, 2, cert.issuer);
+        m_chainGrid->SetCellValue(i, 1, wxString::FromUTF8(cert.subject));
+        m_chainGrid->SetCellValue(i, 2, wxString::FromUTF8(cert.issuer));
         m_chainGrid->SetCellValue(i, 3, cert.validTo);
     }
 
