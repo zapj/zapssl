@@ -1,0 +1,90 @@
+# C++ compiled files
+*.o
+*.obj
+*.exe
+*.out
+*.app
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+build/
+out/
+cmake-build-*/
+
+# wxWidgets specific
+*.xrc.cpp
+*.fbp.bak
+*.fbp.save
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.workspace
+*.workspace.*
+*.cbp
+*.layout
+*.depend
+*.project
+*.cproject
+*.settings/
+nbproject/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Generated binaries directory
+bin/
+lib/
+
+# Generated resource files
+resource.cpp
+resource.h
+
+# Dependency directories that might be included in the project
+vcpkg/
+conan/
+deps/
+external/
+
+# Log files
+*.log
+logs/
