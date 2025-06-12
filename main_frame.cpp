@@ -300,7 +300,6 @@ MainFrame::~MainFrame() {
 }
 
 void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
-#ifdef __WXMSW__
     int row = event.GetRow();
     if (row < 0 || row >= static_cast<int>(m_currentChain.certificates.size())) {
         return;
@@ -313,6 +312,8 @@ void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
         return;
     }
 
+#ifdef __WXMSW__
+    // Windows 平台特定的证书查看器
     // 将证书转换为DER格式
     unsigned char* der = nullptr;
     int der_len = i2d_X509(cert.get(), &der);
@@ -346,6 +347,36 @@ void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
     CryptUIDlgViewCertificate(&viewInfo, &properties);
 
     CertFreeCertificateContext(certContext);
+#elif defined(__WXGTK__)
+    // Linux 平台
+    // 显示一个详细的证书信息对话框
+    wxString certDetails;
+    certDetails << "Certificate Details:\n\n";
+    certDetails << "Subject: " << wxString::FromUTF8(m_currentChain.certificates[row].subject) << "\n";
+    certDetails << "Issuer: " << wxString::FromUTF8(m_currentChain.certificates[row].issuer) << "\n";
+    certDetails << "Valid From: " << m_currentChain.certificates[row].validFrom << "\n";
+    certDetails << "Valid To: " << m_currentChain.certificates[row].validTo << "\n";
+    certDetails << "Serial Number: " << m_currentChain.certificates[row].serialNumber << "\n";
+    
+    wxMessageDialog dialog(this, certDetails, "Certificate Details", wxOK | wxICON_INFORMATION);
+    dialog.ShowModal();
+#elif defined(__WXMAC__)
+    // macOS 平台
+    // 显示一个详细的证书信息对话框
+    wxString certDetails;
+    certDetails << "Certificate Details:\n\n";
+    certDetails << "Subject: " << wxString::FromUTF8(m_currentChain.certificates[row].subject) << "\n";
+    certDetails << "Issuer: " << wxString::FromUTF8(m_currentChain.certificates[row].issuer) << "\n";
+    certDetails << "Valid From: " << m_currentChain.certificates[row].validFrom << "\n";
+    certDetails << "Valid To: " << m_currentChain.certificates[row].validTo << "\n";
+    certDetails << "Serial Number: " << m_currentChain.certificates[row].serialNumber << "\n";
+    
+    wxMessageDialog dialog(this, certDetails, "Certificate Details", wxOK | wxICON_INFORMATION);
+    dialog.ShowModal();
+#else
+    // 其他平台
+    wxMessageBox("Certificate viewer not implemented for this platform.", "Information", wxICON_INFORMATION);
 #endif
+
     event.Skip();
 }

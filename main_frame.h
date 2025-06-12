@@ -7,6 +7,13 @@
 #include "ssl_checker.h"
 #include <mutex>
 
+// Windows specific headers
+#ifdef __WXMSW__
+#include <windows.h>
+#include <wincrypt.h>
+#include <cryptuiapi.h>
+#endif
+
 // Main frame class
 class MainFrame : public wxFrame {
 public:

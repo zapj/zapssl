@@ -121,7 +121,13 @@ bool SSLChecker::checkCertificate(const std::string& host, int port, Certificate
                 if (connect_result == 0) {
                     LogMessage("SSLChecker: Connection closed by peer");
                 } else if (connect_result == -1) {
+                    #ifdef _WIN32
+                    char error_buffer[256];
+                    strerror_s(error_buffer, sizeof(error_buffer), errno);
+                    LogMessage("SSLChecker: System error: " + std::string(error_buffer));
+                    #else
                     LogMessage("SSLChecker: System error: " + std::string(strerror(errno)));
+                    #endif
                 }
             } else if (ssl_error == SSL_ERROR_ZERO_RETURN) {
                 LogMessage("SSLChecker: Connection closed cleanly");

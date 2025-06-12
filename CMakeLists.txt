@@ -46,9 +46,22 @@ target_link_libraries(${PROJECT_NAME}
     ${wxWidgets_LIBRARIES}
     OpenSSL::SSL
     OpenSSL::Crypto
-    Crypt32
-    Cryptui
 )
+
+# Platform specific libraries
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} 
+        PRIVATE 
+        Crypt32
+        Cryptui
+    )
+elseif(APPLE)
+    # macOS specific libraries if needed
+    # target_link_libraries(${PROJECT_NAME} PRIVATE ...)
+elseif(UNIX AND NOT APPLE)
+    # Linux specific libraries if needed
+    # target_link_libraries(${PROJECT_NAME} PRIVATE ...)
+endif()
 
 # Add compiler definitions for Windows
 if(WIN32)
