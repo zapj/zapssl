@@ -284,7 +284,7 @@ void MainFrame::DisplayCertificateInfo(const CertificateInfo& certInfo) {
     for (const auto& san : certInfo.subjectAltNames) {
         m_certificateText->AppendText("  " + wxString::FromUTF8(san) + "\n");
     }
-
+    m_certificateText->SetInsertionPoint(0);
     // info << "Subject: " << wxString::FromUTF8(certInfo.subject) << "\n\n";
     // info << "Issuer: " << wxString::FromUTF8(certInfo.issuer) << "\n\n";
     // info << "Serial Number: " << certInfo.serialNumber << "\n\n";
