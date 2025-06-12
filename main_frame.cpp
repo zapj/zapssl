@@ -50,7 +50,7 @@ MainFrame::MainFrame(const wxString& title)
     inputSizer->Add(m_hostInput, 1, wxRIGHT, 10);
 
     inputSizer->Add(new wxStaticText(panel, wxID_ANY, "Port:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
-    m_portInput = new wxTextCtrl(panel, wxID_ANY, "443");
+    m_portInput = new wxTextCtrl(panel, wxID_ANY, "443", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
     inputSizer->Add(m_portInput, 0, wxRIGHT, 10);
 
     m_checkButton = new wxButton(panel, wxID_ANY, "Check Certificate");
