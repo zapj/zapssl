@@ -34,6 +34,8 @@ private:
     wxTextCtrl* m_certificateText;
     wxGrid* m_chainGrid;
     wxTextCtrl* m_ocspText;
+    wxTextCtrl* m_traceText;
+    wxTextCtrl* m_aboutText;
 
     // SSL Checker instance
     std::unique_ptr<SSLChecker> m_sslChecker;
@@ -47,6 +49,7 @@ private:
     void DisplayCertificateInfo(const CertificateInfo& certInfo);
     void DisplayCertificateChain(const CertificateChain& chain);
     void DisplayOCSPInfo(const CertificateInfo& certInfo);
+    void DisplayTraceInfo(const std::vector<std::string>& traceInfo);
     void ClearResults();
 
     // Thread to perform SSL check

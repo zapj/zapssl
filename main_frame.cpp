@@ -23,6 +23,7 @@ wxBEGIN_EVENT_TABLE(MainFrame, wxFrame)
     EVT_BUTTON(wxID_ANY, MainFrame::OnCheck)
     EVT_TEXT_ENTER(wxID_ANY, MainFrame::OnCheck)
     EVT_COMMAND(wxID_ANY, CHECK_COMPLETE_EVENT, MainFrame::OnCheckComplete)
+    // Grid 事件通过 Bind 方法绑定，不在事件表中使用
 wxEND_EVENT_TABLE()
 
 MainFrame::MainFrame(const wxString& title)
@@ -95,10 +96,41 @@ MainFrame::MainFrame(const wxString& title)
     ocspSizer->Add(m_ocspText, 1, wxEXPAND | wxALL, 5);
     ocspPanel->SetSizer(ocspSizer);
 
+    // Add SSL Trace page
+    wxPanel* tracePanel = new wxPanel(m_notebook);
+    wxBoxSizer* traceSizer = new wxBoxSizer(wxVERTICAL);
+    m_traceText = new wxTextCtrl(tracePanel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+                                wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH);
+    traceSizer->Add(m_traceText, 1, wxEXPAND | wxALL, 5);
+    tracePanel->SetSizer(traceSizer);
+
+    // Add About page
+    wxPanel* aboutPanel = new wxPanel(m_notebook);
+    wxBoxSizer* aboutSizer = new wxBoxSizer(wxVERTICAL);
+    m_aboutText = new wxTextCtrl(aboutPanel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+                                wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH);
+    
+    // Get OpenSSL version info
+    wxString aboutInfo;
+    aboutInfo << "ZapSSL - SSL Certificate Checker\n";
+    aboutInfo << "Version 1.0.0\n\n";
+    aboutInfo << "Website https://zap.dev/projects/zapssl\n\n";
+    aboutInfo << "OpenSSL Version Information:\n";
+    aboutInfo << "OpenSSL Version: " << wxString::FromUTF8(OpenSSL_version(OPENSSL_VERSION)) << "\n";
+    aboutInfo << "OpenSSL Platform: " << wxString::FromUTF8(OpenSSL_version(OPENSSL_PLATFORM)) << "\n";
+    aboutInfo << "OpenSSL Built On: " << wxString::FromUTF8(OpenSSL_version(OPENSSL_BUILT_ON)) << "\n\n";
+    aboutInfo << "Copyright 2023 Zap.Dev. All rights reserved.";
+    
+    m_aboutText->SetValue(aboutInfo);
+    aboutSizer->Add(m_aboutText, 1, wxEXPAND | wxALL, 5);
+    aboutPanel->SetSizer(aboutSizer);
+    
     // Add pages to notebook
     m_notebook->AddPage(certPanel, "Certificate Details");
     m_notebook->AddPage(chainPanel, "Certificate Chain");
     m_notebook->AddPage(ocspPanel, "OCSP Status");
+    m_notebook->AddPage(tracePanel, "SSL Trace");
+    m_notebook->AddPage(aboutPanel, "About");
 
     // Main layout
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -211,6 +243,10 @@ void MainFrame::OnCheckComplete(wxCommandEvent& event) {
         LogMessage("MainFrame: Displaying OCSP information...");
         DisplayOCSPInfo(m_currentChain.certificates[0]);
 
+        // Display SSL trace information
+        LogMessage("MainFrame: Displaying SSL trace information...");
+        DisplayTraceInfo(m_sslChecker->getTraceInfo());
+
         SetStatusText("Certificate check completed");
     } else {
         LogMessage("MainFrame: Check failed or certificate chain is empty");
@@ -284,12 +320,25 @@ void MainFrame::DisplayOCSPInfo(const CertificateInfo& certInfo) {
     m_ocspText->SetValue(info);
 }
 
+void MainFrame::DisplayTraceInfo(const std::vector<std::string>& traceInfo) {
+    wxString info;
+
+    info << "SSL Handshake Trace:\n\n";
+    
+    for (const auto& trace : traceInfo) {
+        info << wxString::FromUTF8(trace) << "\n";
+    }
+
+    m_traceText->SetValue(info);
+}
+
 void MainFrame::ClearResults() {
     m_certificateText->Clear();
     if (m_chainGrid->GetNumberRows() > 0) {
         m_chainGrid->DeleteRows(0, m_chainGrid->GetNumberRows());
     }
     m_ocspText->Clear();
+    m_traceText->Clear();
 }
 
 MainFrame::~MainFrame() {
@@ -300,6 +349,15 @@ MainFrame::~MainFrame() {
 }
 
 void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
+    // int row = event.GetRow();
+    //
+    // if (row >= 0 && row < static_cast<int>(m_currentChain.certificates.size())) {
+    //     // 显示证书详情
+    //     DisplayCertificateInfo(m_currentChain.certificates[row]);
+    //
+    //     // 切换到证书详情页
+    //     m_notebook->SetSelection(0);
+    // }
     int row = event.GetRow();
     if (row < 0 || row >= static_cast<int>(m_currentChain.certificates.size())) {
         return;
@@ -357,7 +415,7 @@ void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
     certDetails << "Valid From: " << m_currentChain.certificates[row].validFrom << "\n";
     certDetails << "Valid To: " << m_currentChain.certificates[row].validTo << "\n";
     certDetails << "Serial Number: " << m_currentChain.certificates[row].serialNumber << "\n";
-    
+
     wxMessageDialog dialog(this, certDetails, "Certificate Details", wxOK | wxICON_INFORMATION);
     dialog.ShowModal();
 #elif defined(__WXMAC__)
@@ -370,12 +428,19 @@ void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
     certDetails << "Valid From: " << m_currentChain.certificates[row].validFrom << "\n";
     certDetails << "Valid To: " << m_currentChain.certificates[row].validTo << "\n";
     certDetails << "Serial Number: " << m_currentChain.certificates[row].serialNumber << "\n";
-    
+
     wxMessageDialog dialog(this, certDetails, "Certificate Details", wxOK | wxICON_INFORMATION);
     dialog.ShowModal();
 #else
-    // 其他平台
-    wxMessageBox("Certificate viewer not implemented for this platform.", "Information", wxICON_INFORMATION);
+    // 其他平台 证书详情显示在首页 Certificate Details
+
+    if (row >= 0 && row < static_cast<int>(m_currentChain.certificates.size())) {
+        // 显示证书详情
+        DisplayCertificateInfo(m_currentChain.certificates[row]);
+
+        // 切换到证书详情页
+        m_notebook->SetSelection(0);
+    }
 #endif
 
     event.Skip();

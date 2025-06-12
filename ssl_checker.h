@@ -48,6 +48,15 @@ public:
     SSLChecker();
     ~SSLChecker();
 
+    // SSL trace callback function
+    static void sslInfoCallback(const SSL* ssl, int type, int val);
+    
+    // Get SSL trace information
+    const std::vector<std::string>& getTraceInfo() const { return m_traceInfo; }
+    
+    // Clear trace information
+    void clearTraceInfo() { m_traceInfo.clear(); }
+
     // Check SSL certificate for a given host and port
     bool checkCertificate(const std::string& host, int port, CertificateChain& chain);
 
@@ -76,6 +85,9 @@ private:
 
     // Store the certificate chain
     std::vector<std::shared_ptr<X509>> m_certificateChain;
+    
+    // Store SSL trace information
+    std::vector<std::string> m_traceInfo;
 
     // Extract certificate information
     CertificateInfo extractCertInfo(X509* cert);

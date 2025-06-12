@@ -21,6 +21,41 @@ SSLChecker::~SSLChecker() {
     cleanupOpenSSL();
 }
 
+void SSLChecker::sslInfoCallback(const SSL* ssl, int type, int val) {
+    // 获取 SSLChecker 实例
+    SSLChecker* checker = static_cast<SSLChecker*>(SSL_get_ex_data(ssl, 0));
+    if (!checker) return;
+    
+    std::stringstream ss;
+    
+    // 处理不同类型的 SSL 事件
+    if (type & SSL_CB_LOOP) {
+        ss << "SSL状态: " << SSL_state_string_long(ssl);
+    } else if (type & SSL_CB_ALERT) {
+        ss << "SSL警告: " << SSL_alert_type_string_long(val) << ": " 
+           << SSL_alert_desc_string_long(val);
+    } else if (type & SSL_CB_EXIT) {
+        if (val == 0) {
+            ss << "SSL错误: " << SSL_state_string_long(ssl);
+        } else if (val < 0) {
+            ss << "SSL错误: " << SSL_state_string_long(ssl) << " (需要重试)";
+        }
+    } else if (type & SSL_CB_HANDSHAKE_START) {
+        ss << "SSL握手开始";
+    } else if (type & SSL_CB_HANDSHAKE_DONE) {
+        ss << "SSL握手完成";
+        
+        // 获取协议和加密套件信息
+        ss << "\n协议版本: " << SSL_get_version(ssl);
+        ss << "\n加密套件: " << SSL_CIPHER_get_name(SSL_get_current_cipher(ssl));
+    }
+    
+    // 添加到 trace 信息中
+    if (!ss.str().empty()) {
+        checker->m_traceInfo.push_back(ss.str());
+    }
+}
+
 void SSLChecker::initOpenSSL() {
     OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
     OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
@@ -85,6 +120,15 @@ bool SSLChecker::checkCertificate(const std::string& host, int port, Certificate
             LogMessage("SSLChecker: Failed to create SSL object");
             throw std::runtime_error("Failed to create SSL object");
         }
+
+        // 设置 SSL 信息回调函数
+        SSL_CTX_set_info_callback(ctx, SSLChecker::sslInfoCallback);
+        
+        // 清除之前的 trace 信息
+        clearTraceInfo();
+        
+        // 设置 ex_data 以便在回调中访问 this 指针
+        SSL_set_ex_data(ssl, 0, this);
 
         SSL_set_bio(ssl, bio, bio);
         bio = nullptr; // BIO is now owned by SSL
