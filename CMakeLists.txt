@@ -74,7 +74,13 @@ set(HEADER_FILES
 )
 
 # Add executable
-add_executable(${PROJECT_NAME} WIN32 ${SOURCE_FILES} ${HEADER_FILES})
+
+if(WIN32)
+    add_executable(${PROJECT_NAME} WIN32 ${SOURCE_FILES} ${HEADER_FILES} resources.rc)
+else()
+    add_executable(${PROJECT_NAME} WIN32 ${SOURCE_FILES} ${HEADER_FILES})
+endif()
+
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} 

@@ -4,7 +4,6 @@
 #include <thread>
 
 #include <openssl/ssl.h>
-#include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/x509.h>
 
@@ -14,6 +13,8 @@
 #include <cryptuiapi.h>
 #pragma comment(lib, "cryptui.lib")
 #endif
+
+
 
 // Define the custom event
 wxDEFINE_EVENT(CHECK_COMPLETE_EVENT, wxCommandEvent);
@@ -31,6 +32,18 @@ MainFrame::MainFrame(const wxString& title)
       m_sslChecker(std::make_unique<SSLChecker>()) {
 
     LogMessage("MainFrame: Constructor called");
+    
+    // Set application icon from embedded resources
+    #ifdef __WXMSW__
+        SetIcon(wxICON(app_icon));
+    #else
+        #include "app_icon.png.h"
+        wxMemoryInputStream istream(app_icon_png, app_icon_png_size);
+        wxImage image(istream, wxBITMAP_TYPE_PNG);
+        wxIcon icon;
+        icon.CopyFromBitmap(wxBitmap(image));
+        SetIcon(icon);
+    #endif
 
     // Create main panel
     wxPanel* panel = new wxPanel(this);
@@ -137,15 +150,51 @@ MainFrame::MainFrame(const wxString& title)
 }
 
 void MainFrame::OnCheck(wxCommandEvent& event) {
-    // Get host and port
-    wxString hostStr = m_hostInput->GetValue();
-    wxString portStr = m_portInput->GetValue();
-
-    if (hostStr.IsEmpty()) {
+    // Get host input
+    wxString inputStr = m_hostInput->GetValue();
+    
+    if (inputStr.IsEmpty()) {
         wxMessageBox("Please enter a hostname or IP address", "Input Error", wxICON_ERROR);
         return;
     }
 
+    // Parse host and port from input
+    wxString hostStr = inputStr;
+    wxString portStr = m_portInput->GetValue();
+    
+    // Check if input contains protocol (http:// or https://)
+    int protocolPos = hostStr.Find("://");
+    if (protocolPos != wxNOT_FOUND) {
+        hostStr = hostStr.Mid(protocolPos + 3); // Skip protocol part
+    }
+    
+    // Find the first / or ? to remove path and query parameters
+    int pathPos = hostStr.Find('/');
+    if (pathPos == wxNOT_FOUND) {
+        pathPos = hostStr.Find('?');
+    }
+    if (pathPos != wxNOT_FOUND) {
+        hostStr = hostStr.Left(pathPos);
+    }
+    
+    // Check if host contains port number
+    int portPos = hostStr.Find(':');
+    if (portPos != wxNOT_FOUND) {
+        // Extract port number
+        wxString extractedPort = hostStr.Mid(portPos + 1);
+        
+        // Remove port from host string
+        hostStr = hostStr.Left(portPos);
+        
+        // Check if extracted port is valid
+        long port;
+        if (extractedPort.ToLong(&port) && port > 0 && port <= 65535) {
+            portStr = extractedPort;
+            m_portInput->SetValue(portStr);
+        }
+    }
+    
+    // Check if port is valid
     long port;
     if (!portStr.ToLong(&port) || port <= 0 || port > 65535) {
         wxMessageBox("Please enter a valid port number (1-65535)", "Input Error", wxICON_ERROR);
