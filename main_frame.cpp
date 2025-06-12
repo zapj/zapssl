@@ -247,7 +247,12 @@ void MainFrame::OnCheckComplete(wxCommandEvent& event) {
         if (m_currentChain.certificates.empty()) {
             LogMessage("MainFrame: m_currentChain.certificates is empty");
         }
+        wxTextAttr attr;
+        attr.SetTextColour(*wxRED);  // 设置红色
+        const long start = m_certificateText->GetLastPosition();
         m_certificateText->SetValue("Failed to retrieve certificate information");
+        const long end = m_certificateText->GetLastPosition();
+        m_certificateText->SetStyle(start, end, attr);
         SetStatusText("Certificate check failed");
     }
 
@@ -256,24 +261,46 @@ void MainFrame::OnCheckComplete(wxCommandEvent& event) {
 }
 
 void MainFrame::DisplayCertificateInfo(const CertificateInfo& certInfo) {
-    wxString info;
+    wxTextAttr attr;
+    wxColour green(11 ,114, 30);
+    attr.SetTextColour(green);
+    // wxString info;
+    m_certificateText->AppendText("Certificate Information:\n\n");
+    m_certificateText->AppendText("Subject: " + wxString::FromUTF8(certInfo.subject) + "\n\n");
+    m_certificateText->AppendText("Issuer: " + wxString::FromUTF8(certInfo.issuer) + "\n\n");
+    m_certificateText->AppendText("Serial Number: " + certInfo.serialNumber + "\n");
+    m_certificateText->AppendText("Valid From: " + certInfo.validFrom + "\n");
+    m_certificateText->AppendText("Valid To: " + certInfo.validTo + "\n");
+    m_certificateText->AppendText("Remaining Validity: ");
+    const int rstart = m_certificateText->GetLastPosition();
+    m_certificateText->AppendText(wxString::FromUTF8(certInfo.remainingValidity) + "\n");
+    const int rend = m_certificateText->GetLastPosition();
+    m_certificateText->SetStyle(rstart, rend, attr);
+    m_certificateText->AppendText("Signature Algorithm: " + certInfo.signatureAlgorithm + "\n");
+    m_certificateText->AppendText("Public Key: " + certInfo.publicKeyType + ", " +  wxString::Format(wxT("%i"), certInfo.publicKeyBits) + " bits\n");
+    m_certificateText->AppendText("Thumbprint (SHA-1): " + certInfo.thumbprint + "\n");
 
-    info << "Subject: " << wxString::FromUTF8(certInfo.subject) << "\n\n";
-    info << "Issuer: " << wxString::FromUTF8(certInfo.issuer) << "\n\n";
-    info << "Serial Number: " << certInfo.serialNumber << "\n\n";
-    info << "Valid From: " << certInfo.validFrom << "\n";
-    info << "Valid To: " << certInfo.validTo << "\n";
-    info << "Remaining Validity: " << wxString::FromUTF8(certInfo.remainingValidity) << "\n\n";
-    info << "Signature Algorithm: " << certInfo.signatureAlgorithm << "\n\n";
-    info << "Public Key: " << certInfo.publicKeyType << ", " << certInfo.publicKeyBits << " bits\n\n";
-    info << "Thumbprint (SHA-1): " << certInfo.thumbprint << "\n\n";
-
-    info << "Subject Alternative Names:\n";
+    m_certificateText->AppendText("Subject Alternative Names:\n");
     for (const auto& san : certInfo.subjectAltNames) {
-        info << "  " << wxString::FromUTF8(san) << "\n";
+        m_certificateText->AppendText("  " + wxString::FromUTF8(san) + "\n");
     }
 
-    m_certificateText->SetValue(info);
+    // info << "Subject: " << wxString::FromUTF8(certInfo.subject) << "\n\n";
+    // info << "Issuer: " << wxString::FromUTF8(certInfo.issuer) << "\n\n";
+    // info << "Serial Number: " << certInfo.serialNumber << "\n\n";
+    // info << "Valid From: " << certInfo.validFrom << "\n";
+    // info << "Valid To: " << certInfo.validTo << "\n";
+    // info << "Remaining Validity: " << wxString::FromUTF8(certInfo.remainingValidity) << "\n\n";
+    // info << "Signature Algorithm: " << certInfo.signatureAlgorithm << "\n\n";
+    // info << "Public Key: " << certInfo.publicKeyType << ", " << certInfo.publicKeyBits << " bits\n\n";
+    // info << "Thumbprint (SHA-1): " << certInfo.thumbprint << "\n\n";
+    //
+    // info << "Subject Alternative Names:\n";
+    // for (const auto& san : certInfo.subjectAltNames) {
+    //     info << "  " << wxString::FromUTF8(san) << "\n";
+    // }
+    //
+    // m_certificateText->SetValue(info);
 }
 
 void MainFrame::DisplayCertificateChain(const CertificateChain& chain) {
