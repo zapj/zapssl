@@ -1,4 +1,4 @@
-#include "ssl_checker.h"
+﻿#include "ssl_checker.h"
 #include <sstream>
 #include <iomanip>
 #include <chrono>
@@ -6,8 +6,7 @@
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/sha.h>
-
-#include "cacert.h"
+#include "resources/cacert_resource.h"
 
 
 // 声明外部日志函数
@@ -27,27 +26,27 @@ void SSLChecker::sslInfoCallback(const SSL* ssl, int type, int val) {
     if (!checker) return;
     
     std::stringstream ss;
-    
+
     // 处理不同类型的 SSL 事件
     if (type & SSL_CB_LOOP) {
-        ss << "SSL状态: " << SSL_state_string_long(ssl);
+        ss << "SSL state: " << SSL_state_string_long(ssl);
     } else if (type & SSL_CB_ALERT) {
-        ss << "SSL警告: " << SSL_alert_type_string_long(val) << ": " 
+        ss << "SSL alert: " << SSL_alert_type_string_long(val) << ": "
            << SSL_alert_desc_string_long(val);
     } else if (type & SSL_CB_EXIT) {
         if (val == 0) {
-            ss << "SSL错误: " << SSL_state_string_long(ssl);
+            ss << "SSL error: " << SSL_state_string_long(ssl);
         } else if (val < 0) {
-            ss << "SSL错误: " << SSL_state_string_long(ssl) << " (需要重试)";
+            ss << "SSL error: " << SSL_state_string_long(ssl) << " (retry needed)";
         }
     } else if (type & SSL_CB_HANDSHAKE_START) {
-        ss << "SSL握手开始";
+        ss << "SSL handshake started";
     } else if (type & SSL_CB_HANDSHAKE_DONE) {
-        ss << "SSL握手完成";
+        ss << "SSL handshake completed";
         
-        // 获取协议和加密套件信息
-        ss << "\n协议版本: " << SSL_get_version(ssl);
-        ss << "\n加密套件: " << SSL_CIPHER_get_name(SSL_get_current_cipher(ssl));
+        // Get protocol and cipher info
+        ss << "\nProtocol version: " << SSL_get_version(ssl);
+        ss << "\nCipher suite: " << SSL_CIPHER_get_name(SSL_get_current_cipher(ssl));
     }
     
     // 添加到 trace 信息中
@@ -83,14 +82,16 @@ bool SSLChecker::checkCertificate(const std::string& host, int port, Certificate
             LogMessage("SSLChecker: Failed to create SSL context");
             throw std::runtime_error("Failed to create SSL context");
         }
+
+        // 获取证书内容
+        std::string_view cert_data = resources::get_cacert_pem();
         // 加载 CA 证书文件用于验证
-        if (SSL_CTX_load_verify_locations(ctx,NULL, CACERT.c_str()) != 1) {
+        if (SSL_CTX_load_verify_locations(ctx,NULL, cert_data.data()) != 1) {
             // 加载失败，打印错误信息
             ERR_print_errors_fp(stderr);
             // 根据需要处理错误，例如退出程序
             exit(EXIT_FAILURE);
         }
-
         // Enable automatic chain building
         LogMessage("SSLChecker: Setting up SSL context options...");
         SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
@@ -504,7 +505,7 @@ std::string SSLChecker::calculateRemainingValidity(ASN1_TIME* expiry) {
 
     // If both days and seconds are negative or zero, the certificate has expired
     if (pday < 0 || (pday == 0 && psec <= 0)) {
-        return "已过期";
+        return "Expired";
     }
 
     // Convert total seconds to days (add the seconds component to days)
@@ -520,12 +521,12 @@ std::string SSLChecker::calculateRemainingValidity(ASN1_TIME* expiry) {
         if (remaining_days > 30) {
             int months = remaining_days / 30;
             remaining_days = remaining_days % 30;
-            return std::to_string(years) + "年" + std::to_string(months) + "个月" + std::to_string(remaining_days) + "天";
+            return std::to_string(years) + " years " + std::to_string(months) + " months " + std::to_string(remaining_days) + " days";
         } else {
-            return std::to_string(years) + "年" + std::to_string(remaining_days) + "天";
+            return std::to_string(years) + " years " + std::to_string(remaining_days) + " days";
         }
     } else {
-        return std::to_string(total_days) + "天";
+        return std::to_string(total_days) + " days";
     }
 }
 

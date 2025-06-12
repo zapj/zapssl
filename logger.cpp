@@ -1,7 +1,8 @@
-#include "logger.h"
+﻿#include "logger.h"
 #include <ctime>
 #include <wx/msgdlg.h>
 
+#ifdef __ZAPDEBUG__
 // 全局日志文件
 std::ofstream g_logFile;
 
@@ -32,7 +33,7 @@ bool InitializeLogger(const std::string& logFilePath) {
     // 打开日志文件
     g_logFile.open(logFilePath, std::ios::out | std::ios::app);
     if (!g_logFile.is_open()) {
-        wxMessageBox("无法创建日志文件", "错误", wxICON_ERROR);
+        wxMessageBox("Cannot create log file", "Error Information", wxICON_ERROR);
         return false;
     }
 
@@ -47,3 +48,13 @@ void ShutdownLogger() {
         g_logFile.close();
     }
 }
+#else
+// Release版本的空实现
+void LogMessage(const std::string& message) {}
+
+bool InitializeLogger(const std::string& logFilePath) {
+    return true; // 总是返回成功
+}
+
+void ShutdownLogger() {}
+#endif

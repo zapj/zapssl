@@ -1,0 +1,18 @@
+#include "cacert_resource.h"
+
+namespace resources {
+
+namespace {
+// CA 证书数据
+const unsigned char CACERT_DATA[] = {
+    @CACERT_HEX_ARRAY@
+};
+
+const size_t CACERT_SIZE = sizeof(CACERT_DATA);
+} // anonymous namespace
+
+std::string_view get_cacert_pem() {
+    return std::string_view(reinterpret_cast<const char*>(CACERT_DATA), CACERT_SIZE);
+}
+
+} // namespace resources

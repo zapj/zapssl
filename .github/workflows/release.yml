@@ -1,0 +1,97 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            output_name: zapssl.exe
+            asset_name: zapssl-windows-x64.zip
+            vcpkg_triplet: x64-mingw-dynamic
+          - os: ubuntu-latest
+            output_name: zapssl
+            asset_name: zapssl-linux-x64.tar.gz
+          - os: macos-latest
+            output_name: zapssl
+            asset_name: zapssl-macos-x64.tar.gz
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Set up vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'a42af01b72c28a8e1d7b48107b33e4f286a55ef6'
+
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwxgtk3.0-gtk3-dev libssl-dev
+
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install wxwidgets openssl@3
+
+    - name: Install dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        vcpkg install wxwidgets:${{ matrix.vcpkg_triplet }} openssl:${{ matrix.vcpkg_triplet }}
+
+    - name: Configure CMake (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cmake -B build -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+
+    - name: Configure CMake (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        cmake -B build -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
+
+    - name: Configure CMake (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: cmake -B build
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Collect dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir -p dist
+        cp build/Release/${{ matrix.output_name }} dist/
+        # Copy required DLLs
+        cp ${{ env.VCPKG_ROOT }}/installed/${{ matrix.vcpkg_triplet }}/bin/*.dll dist/
+        # Create zip archive
+        cd dist
+        7z a ../${{ matrix.asset_name }} *
+
+    - name: Collect dependencies (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        mkdir -p dist
+        cp build/${{ matrix.output_name }} dist/
+        cd dist
+        tar czf ../${{ matrix.asset_name }} *
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{ matrix.asset_name }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,4 +1,4 @@
-#include "main_frame.h"
+﻿#include "main_frame.h"
 #include "logger.h"
 #include <wx/statline.h>
 #include <thread>
@@ -29,15 +29,7 @@ wxEND_EVENT_TABLE()
 MainFrame::MainFrame(const wxString& title)
     : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxSize(800, 600)),
       m_sslChecker(std::make_unique<SSLChecker>()) {
-    
-    // 初始化日志文件
-    if (!g_logFile.is_open()) {
-        g_logFile.open("zapssl_debug.log", std::ios::out | std::ios::app);
-        if (g_logFile.is_open()) {
-            LogMessage("=== ZapSSL Application Started ===");
-        }
-    }
-    
+
     LogMessage("MainFrame: Constructor called");
 
     // Create main panel
@@ -113,11 +105,10 @@ MainFrame::MainFrame(const wxString& title)
     // Get OpenSSL version info
     wxString aboutInfo;
     aboutInfo << "ZapSSL - SSL Certificate Checker\n";
-    aboutInfo << "Version 1.0.0\n\n";
+    aboutInfo << "Version 1.0.1\n\n";
     aboutInfo << "Website https://zap.dev/projects/zapssl\n\n";
     aboutInfo << "OpenSSL Version Information:\n";
     aboutInfo << "OpenSSL Version: " << wxString::FromUTF8(OpenSSL_version(OPENSSL_VERSION)) << "\n";
-    aboutInfo << "OpenSSL Platform: " << wxString::FromUTF8(OpenSSL_version(OPENSSL_PLATFORM)) << "\n";
     aboutInfo << "OpenSSL Built On: " << wxString::FromUTF8(OpenSSL_version(OPENSSL_BUILT_ON)) << "\n\n";
     aboutInfo << "Copyright 2023 Zap.Dev. All rights reserved.";
     
@@ -343,9 +334,6 @@ void MainFrame::ClearResults() {
 
 MainFrame::~MainFrame() {
     LogMessage("=== ZapSSL Application Shutting Down ===");
-    if (g_logFile.is_open()) {
-        g_logFile.close();
-    }
 }
 
 void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
