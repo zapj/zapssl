@@ -35,6 +35,13 @@ struct CertificateChain {
     bool isTrusted;
 };
 
+// Custom deleter for X509 certificates
+struct X509Deleter {
+    void operator()(X509* cert) {
+        if (cert) X509_free(cert);
+    }
+};
+
 // SSL Checker class to handle SSL connections and certificate validation
 class SSLChecker {
 public:
@@ -47,12 +54,28 @@ public:
     // Check OCSP status
     bool checkOCSP(X509* cert, X509* issuerCert, std::string& status, std::string& responderUrl, std::string& responseTime);
 
+    // Get certificate at specified index
+    std::shared_ptr<X509> getCertificate(size_t index) const {
+        if (index < m_certificateChain.size()) {
+            return m_certificateChain[index];
+        }
+        return nullptr;
+    }
+
+    // Get number of certificates in the chain
+    size_t getCertificateCount() const {
+        return m_certificateChain.size();
+    }
+
 private:
     // Initialize OpenSSL
     void initOpenSSL();
 
     // Clean up OpenSSL
     void cleanupOpenSSL();
+
+    // Store the certificate chain
+    std::vector<std::shared_ptr<X509>> m_certificateChain;
 
     // Extract certificate information
     CertificateInfo extractCertInfo(X509* cert);

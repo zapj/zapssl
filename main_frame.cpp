@@ -3,6 +3,18 @@
 #include <wx/statline.h>
 #include <thread>
 
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/x509.h>
+
+#ifdef __WXMSW__
+#include <windows.h>
+#include <wincrypt.h>
+#include <cryptuiapi.h>
+#pragma comment(lib, "cryptui.lib")
+#endif
+
 // Define the custom event
 wxDEFINE_EVENT(CHECK_COMPLETE_EVENT, wxCommandEvent);
 
@@ -64,6 +76,13 @@ MainFrame::MainFrame(const wxString& title)
     m_chainGrid->SetColLabelValue(1, "Subject");
     m_chainGrid->SetColLabelValue(2, "Issuer");
     m_chainGrid->SetColLabelValue(3, "Valid Until");
+    
+    // 设置Grid为只读
+    m_chainGrid->EnableEditing(false);
+    
+    // 绑定双击事件
+    m_chainGrid->Bind(wxEVT_GRID_CELL_LEFT_DCLICK, &MainFrame::OnGridCellDoubleClick, this);
+    
     m_chainGrid->AutoSizeColumns();
     chainSizer->Add(m_chainGrid, 1, wxEXPAND | wxALL, 5);
     chainPanel->SetSizer(chainSizer);
@@ -278,4 +297,55 @@ MainFrame::~MainFrame() {
     if (g_logFile.is_open()) {
         g_logFile.close();
     }
+}
+
+void MainFrame::OnGridCellDoubleClick(wxGridEvent& event) {
+#ifdef __WXMSW__
+    int row = event.GetRow();
+    if (row < 0 || row >= static_cast<int>(m_currentChain.certificates.size())) {
+        return;
+    }
+
+    // 获取保存的证书
+    std::shared_ptr<X509> cert = m_sslChecker->getCertificate(row);
+    if (!cert) {
+        wxMessageBox("Failed to get certificate", "Error", wxICON_ERROR);
+        return;
+    }
+
+    // 将证书转换为DER格式
+    unsigned char* der = nullptr;
+    int der_len = i2d_X509(cert.get(), &der);
+    if (der_len < 0) {
+        wxMessageBox("Failed to convert certificate to DER format", "Error", wxICON_ERROR);
+        return;
+    }
+
+    // 创建Windows证书上下文
+    PCCERT_CONTEXT certContext = CertCreateCertificateContext(
+        X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+        der,
+        der_len
+    );
+
+    OPENSSL_free(der);
+
+    if (!certContext) {
+        wxMessageBox("Failed to create certificate context", "Error", wxICON_ERROR);
+        return;
+    }
+
+    // 显示证书对话框
+    CRYPTUI_VIEWCERTIFICATE_STRUCT viewInfo = { 0 };
+    viewInfo.dwSize = sizeof(CRYPTUI_VIEWCERTIFICATE_STRUCT);
+    viewInfo.hwndParent = this->GetHandle();
+    viewInfo.pCertContext = certContext;
+    viewInfo.dwFlags = CRYPTUI_DISABLE_EDITPROPERTIES | CRYPTUI_DISABLE_ADDTOSTORE;
+
+    BOOL properties = FALSE;
+    CryptUIDlgViewCertificate(&viewInfo, &properties);
+
+    CertFreeCertificateContext(certContext);
+#endif
+    event.Skip();
 }

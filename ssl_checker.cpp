@@ -143,6 +143,9 @@ bool SSLChecker::checkCertificate(const std::string& host, int port, Certificate
         }
         LogMessage("SSLChecker: Found " + std::to_string(sk_X509_num(cert_chain)) + " certificates in the chain");
 
+        // Clear previous certificate chain
+        m_certificateChain.clear();
+
         // Process certificates
         chain.certificates.clear();
         chain.isComplete = true;
@@ -152,6 +155,13 @@ bool SSLChecker::checkCertificate(const std::string& host, int port, Certificate
         for (int i = 0; i < sk_X509_num(cert_chain); i++) {
             LogMessage("SSLChecker: Processing certificate " + std::to_string(i + 1) + " of " + std::to_string(sk_X509_num(cert_chain)));
             X509* cert = sk_X509_value(cert_chain, i);
+            
+            // Save certificate to our chain
+            X509* cert_copy = X509_dup(cert);
+            if (cert_copy) {
+                m_certificateChain.push_back(std::shared_ptr<X509>(cert_copy, X509Deleter()));
+            }
+            
             chain.certificates.push_back(extractCertInfo(cert));
 
             // Check OCSP for the leaf certificate

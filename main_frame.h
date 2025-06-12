@@ -34,6 +34,7 @@ private:
     // Event handlers
     void OnCheck(wxCommandEvent& event);
     void OnCheckComplete(wxCommandEvent& event);
+    void OnGridCellDoubleClick(wxGridEvent& event);
 
     // Helper methods
     void DisplayCertificateInfo(const CertificateInfo& certInfo);

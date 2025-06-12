@@ -46,6 +46,8 @@ target_link_libraries(${PROJECT_NAME}
     ${wxWidgets_LIBRARIES}
     OpenSSL::SSL
     OpenSSL::Crypto
+    Crypt32
+    Cryptui
 )
 
 # Add compiler definitions for Windows
